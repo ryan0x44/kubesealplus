@@ -3,18 +3,18 @@ package main
 import "time"
 
 type SealedSecret struct {
-	ApiVersion string `json:"apiVersion"`
-	Kind       string `json:"kind"`
+	ApiVersion string `yaml:"apiVersion"`
+	Kind       string `yaml:"kind"`
 	Metadata   struct {
-		CreationTimestamp time.Time `json:"creationTimestamp,omitempty"`
-		Name              string    `json:"name"`
-		Namespace         string    `json:"namespace,omitempty"`
-	} `json:"metadata"`
+		CreationTimestamp time.Time `yaml:"creationTimestamp,omitempty"`
+		Name              string    `yaml:"name"`
+		Namespace         string    `yaml:"namespace,omitempty"`
+	} `yaml:"metadata"`
 	Spec struct {
-		EncryptedData map[string]string `json:"encryptedData,omitempty"`
+		EncryptedData map[string]string `yaml:"encryptedData,omitempty"`
 		Template      struct {
-			Data     map[string]string `json:"data"`
-			Metadata map[string]string `json:"metadata"`
-		} `json:"template"`
-	} `json:"spec`
+			Data     *map[string]string `yaml:"data"`
+			Metadata map[string]string  `yaml:"metadata"`
+		} `yaml:"template"`
+	} `yaml:"spec`
 }
