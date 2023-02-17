@@ -113,6 +113,7 @@ func main() {
 	}
 
 	// TODO
-	fmt.Printf("%s", keys)
+	secrets, err := PromptSecrets(keys, os.Stdin, os.Stdout)
+	fmt.Printf("Secrets:\n%+v\nError:\n%s", secrets, err)
 
 }
