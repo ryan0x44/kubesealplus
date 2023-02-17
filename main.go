@@ -112,15 +112,23 @@ func main() {
 		keys = append(keys, k)
 	}
 
-	// TODO
-	secrets := map[string]string{}
+	var secrets map[string]string
+	var redoSecrets map[string]string
+	var redo string
 	for {
-		secrets, err := PromptSecrets(keys, os.Stdin, os.Stdout)
+		if redo != "" {
+			redoSecrets, err = PromptSecrets([]string{redo}, os.Stdin, os.Stdout)
+		} else {
+			secrets, err = PromptSecrets(keys, os.Stdin, os.Stdout)
+		}
 		if err != nil {
 			fmt.Printf("%s\n", err)
 			os.Exit(1)
 		}
-		redo, err := PromptConfirm(secrets, os.Stdin, os.Stdout)
+		if redo != "" {
+			secrets[redo] = redoSecrets[redo]
+		}
+		redo, err = PromptConfirm(secrets, os.Stdin, os.Stdout)
 		if err != nil {
 			fmt.Printf("%s\n", err)
 			os.Exit(1)
@@ -129,6 +137,8 @@ func main() {
 			break
 		}
 	}
+
+	// TODO
 	fmt.Printf("Secrets:\n%+v\nError:\n%s", secrets, err)
 
 }
