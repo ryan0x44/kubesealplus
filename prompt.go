@@ -8,7 +8,15 @@ import (
 	"strings"
 )
 
+const ANSI_ESCAPE_CLEAR = "\033[H\033[2J"
+
 func PromptSecrets(keys []string, input io.Reader, output io.Writer) (secrets map[string]string, err error) {
+	fmt.Fprintf(
+		output,
+		"%s%s\n\nPlease enter your secrets for each key then press enter:\n",
+		ANSI_ESCAPE_CLEAR,
+		strings.Repeat(`-`, 80),
+	)
 	secrets = map[string]string{}
 	reader := bufio.NewReader(input)
 	for _, key := range keys {
@@ -25,7 +33,12 @@ func PromptSecrets(keys []string, input io.Reader, output io.Writer) (secrets ma
 
 func PromptConfirm(secrets map[string]string, input io.Reader, output io.Writer) (redo string, err error) {
 	reader := bufio.NewReader(input)
-	fmt.Fprintf(output, "\n%s\n\nPlease review each secret is correct:\n", strings.Repeat(`-`, 80))
+	fmt.Fprintf(
+		output,
+		"%s%s\n\nPlease review each secret is correct:\n",
+		ANSI_ESCAPE_CLEAR,
+		strings.Repeat(`-`, 80),
+	)
 	i := 0
 	var keys []string
 	for k, v := range secrets {
@@ -54,5 +67,6 @@ func PromptConfirm(secrets map[string]string, input io.Reader, output io.Writer)
 		}
 		fmt.Fprintf(output, "ERROR: Input invalid, please retry.\n")
 	}
+	fmt.Fprint(output, ANSI_ESCAPE_CLEAR)
 	return
 }
