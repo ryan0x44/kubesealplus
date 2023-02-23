@@ -70,3 +70,7 @@ func PromptConfirm(secrets map[string]string, input io.Reader, output io.Writer)
 	fmt.Fprint(output, ANSI_ESCAPE_CLEAR)
 	return
 }
+
+func PromptClear(output io.Writer) {
+	fmt.Fprint(output, ANSI_ESCAPE_CLEAR)
+}

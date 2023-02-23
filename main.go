@@ -47,11 +47,12 @@ func main() {
 	}
 	_ = secretName
 
-	file, err := os.Open(filename)
+	file, err := os.OpenFile(filename, os.O_RDWR, 0644)
 	if err != nil {
 		fmt.Printf("Cannot open file: %s\n", filename)
 		os.Exit(1)
 	}
+	defer file.Close()
 
 	template, err := io.ReadAll(file)
 	if err != nil {
@@ -100,16 +101,30 @@ func main() {
 
 	// TODO: parse filenames and read file contents
 
-	// create Secret YAML
-	secretYAML, err := createSecretYAML(sealedSecret.Metadata.Name, sealedSecret.Metadata.Namespace, time.Now(), secrets)
+	secretYAML, err := createSecretYAML(
+		sealedSecret.Metadata.Name,
+		sealedSecret.Metadata.Namespace,
+		time.Now(),
+		secrets,
+	)
 	if err != nil {
-		fmt.Printf("%s\n", err)
+		fmt.Printf("error creating Secret:\n%s\n", err)
 		os.Exit(1)
 	}
 
-	// TODO: create SealedSecret and write to disk
+	sealedSecretYAML, err := createSealedSecret(secretYAML)
+	if err != nil {
+		fmt.Printf("error creating SealedSecret via kubeseal:\n%s\n", err)
+		os.Exit(1)
+	}
 
-	// TODO
-	fmt.Printf("%s\n", secretYAML)
+	PromptClear(os.Stdout)
+
+	out, err := sealedSecretToTemplate(file, environment, sealedSecretYAML)
+	if err != nil {
+		fmt.Printf("error writing SealedSecret to template %s:\n%s\n", filename, err)
+		os.Exit(1)
+	}
+	fmt.Printf("Wrote new SealedSecret to file\n%s\nwith content:\n%s", filename, out.String())
 
 }

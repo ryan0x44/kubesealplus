@@ -2,15 +2,47 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
 
+func createSealedSecret(secretYAML string) (manifest string, err error) {
+	ctx, timeout := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer timeout()
+	cmd := exec.CommandContext(ctx, "kubeseal", "-o", "yaml", "--cert", "cert.pem")
+	var stdout, stderr bytes.Buffer
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return
+	}
+	io.WriteString(stdin, secretYAML)
+	stdin.Close()
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	if err != nil {
+		return
+	}
+	if strings.TrimSpace(stderr.String()) != "" {
+		err = fmt.Errorf("%s", stderr.String())
+	}
+	manifest = stdout.String()
+	return
+}
+
+const firstLineTemplate = "{{- if eq .Values.environment \"%s\" }}"
+const lastLineTemplate = `{{- end }}`
+
 func sealedSecretFromTemplate(filename string, environment string, template string) (sealedSecret SealedSecret, err error) {
-	expectFirstLine := "{{- if eq .Values.environment \"" + environment + "\" }}"
-	const expectLastLine = `{{- end }}`
+	expectFirstLine := fmt.Sprintf(firstLineTemplate, environment)
+	const expectLastLine = lastLineTemplate
 	template = strings.TrimSpace(template)
 	lines := strings.Split(template, "\n")
 	if len(lines) < 3 {
@@ -45,5 +77,16 @@ func sealedSecretFromTemplate(filename string, environment string, template stri
 		return
 	}
 
+	return
+}
+
+func sealedSecretToTemplate(f *os.File, environment string, template string) (out bytes.Buffer, err error) {
+	f.Truncate(0)
+	f.Seek(0, io.SeekStart)
+	for _, writer := range []io.StringWriter{f, &out} {
+		writer.WriteString(fmt.Sprintf(firstLineTemplate+"\n", environment))
+		writer.WriteString(template)
+		writer.WriteString(fmt.Sprintf(lastLineTemplate + "\n"))
+	}
 	return
 }
