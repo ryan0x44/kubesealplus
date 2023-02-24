@@ -33,7 +33,7 @@ func CertLoad(location string) ([]byte, error) {
 
 func CertLoadFromFile(path string) (cert []byte, err error) {
 	// TODO
-	return nil, nil
+	return nil, fmt.Errorf("loading cert from file is not implemented yet")
 }
 
 func CertLoadFromURL(inURL string) (cert []byte, err error) {

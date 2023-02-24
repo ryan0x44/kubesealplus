@@ -52,13 +52,9 @@ func (doc *ConfigDoc) Load(filename string) error {
 }
 
 func (doc *ConfigDoc) Save(filename string) error {
-	filedir := filepath.Dir(filename)
-	_, err := os.Stat(filedir)
+	err := ConfigEnsureFileDirExists(filename)
 	if err != nil {
-		err = os.Mkdir(filedir, os.ModePerm)
-		if err != nil {
-			return err
-		}
+		return err
 	}
 
 	file, err := os.Create(filename)
@@ -83,6 +79,18 @@ func (doc *ConfigDoc) Save(filename string) error {
 	return nil
 }
 
+func ConfigEnsureFileDirExists(filename string) error {
+	filedir := filepath.Dir(filename)
+	_, err := os.Stat(filedir)
+	if err != nil {
+		err = os.Mkdir(filedir, os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func ConfigDirDefaultPath() (path string, err error) {
 	dirname, err := os.UserHomeDir()
 	if err != nil {
@@ -101,5 +109,36 @@ func ConfigFileDefaultPath(filename string) (path string, err error) {
 		return
 	}
 	path = fmt.Sprintf("%s/%s", dirname, filename)
+	return
+}
+
+func ConfigWriteCert(environment string, cert []byte) (filename string, err error) {
+	filename, err = ConfigFileDefaultPath(fmt.Sprintf("cert-%s.pem", environment))
+	if err != nil {
+		return
+	}
+
+	err = ConfigEnsureFileDirExists(filename)
+	if err != nil {
+		return
+	}
+
+	file, err := os.Create(filename)
+	if err != nil {
+		err = fmt.Errorf("cannot write cert to file '%s': %s", filename, err)
+		return
+	}
+	defer file.Close()
+
+	bytesWritten, err := io.WriteString(file, string(cert))
+	if err == nil && bytesWritten != len(cert) {
+		err = fmt.Errorf("failed to write all bytes to cert file '%s'", filename)
+		return
+	}
+	if err != nil {
+		err = fmt.Errorf("cannot write to cert file '%s': %s", filename, err)
+		return
+	}
+
 	return
 }

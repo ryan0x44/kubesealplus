@@ -13,10 +13,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func createSealedSecret(secretYAML string) (manifest string, err error) {
+func createSealedSecret(secretYAML string, certFilename string) (manifest string, err error) {
 	ctx, timeout := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer timeout()
-	cmd := exec.CommandContext(ctx, "kubeseal", "-o", "yaml", "--cert", "cert.pem")
+	cmd := exec.CommandContext(ctx, "kubeseal", "-o", "yaml", "--cert", certFilename)
 	var stdout, stderr bytes.Buffer
 	stdin, err := cmd.StdinPipe()
 	if err != nil {

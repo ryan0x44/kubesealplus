@@ -99,16 +99,43 @@ func configure(environment string, configKey string, configValue string) {
 		fmt.Printf("Unable to save config file: %s", err)
 		os.Exit(1)
 	}
-	fmt.Printf("Cert '%s'\nfor environment '%s'\nsuccessfully saved to config file '%s'\n", configValue, environment, configFile)
+	fmt.Printf("Cert value '%s'\nfor environment '%s'\nsuccessfully saved to config file '%s'\n", configValue, environment, configFile)
 }
 
 func rotate(filename string) {
-	secretName, environment, err := nameAndEnvFromFilename(filename)
+	_, environment, err := nameAndEnvFromFilename(filename)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		os.Exit(1)
 	}
-	_ = secretName
+
+	configFile, err := ConfigFileDefaultPath("")
+	if err != nil {
+		panic(err)
+	}
+	configDoc := ConfigDoc{}
+	if !configDoc.Exists(configFile) {
+		fmt.Printf("Config for environment '%s' not found. Run this:\n"+
+			"kubesealplus config %s cert (your-cert-file)", environment, environment)
+		os.Exit(1)
+	}
+	err = configDoc.Load(configFile)
+	if err != nil {
+		fmt.Printf("Error loading config file %s: %s\n", configFile, err)
+		os.Exit(1)
+	}
+
+	certConfigValue := configDoc.Environments[environment]["cert"]
+	cert, err := CertLoad(certConfigValue)
+	if err != nil {
+		fmt.Printf("Unable to load cert '%s':\n%s\n", certConfigValue, err)
+		os.Exit(1)
+	}
+	certFilename, err := ConfigWriteCert(environment, cert)
+	if err != nil {
+		fmt.Printf("Unable to write latest cert to disk:\n%s\n", err)
+		os.Exit(1)
+	}
 
 	file, err := os.OpenFile(filename, os.O_RDWR, 0644)
 	if err != nil {
@@ -175,7 +202,7 @@ func rotate(filename string) {
 		os.Exit(1)
 	}
 
-	sealedSecretYAML, err := createSealedSecret(secretYAML)
+	sealedSecretYAML, err := createSealedSecret(secretYAML, certFilename)
 	if err != nil {
 		fmt.Printf("error creating SealedSecret via kubeseal:\n%s\n", err)
 		os.Exit(1)
