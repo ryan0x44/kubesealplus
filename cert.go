@@ -2,14 +2,16 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 	"net/url"
-	"os"
 	"strings"
 )
 
 func normalizeCertURL(inURL string) (outURL *url.URL, err error) {
 	if !strings.HasPrefix(inURL, "http://") && !strings.HasPrefix(inURL, "https://") {
-		inURL = "https://" + inURL
+		err = fmt.Errorf("Provided value must be URL starting with 'http(s)://'. Got: %s", inURL)
+		return
 	}
 	outURL, err = url.Parse(inURL)
 	if err != nil {
@@ -22,24 +24,50 @@ func normalizeCertURL(inURL string) (outURL *url.URL, err error) {
 	return
 }
 
-func fetchCert(inURL string) {
+func CertLoad(location string) ([]byte, error) {
+	if strings.HasPrefix(location, "http://") || strings.HasPrefix(location, "https://") {
+		return CertLoadFromURL(location)
+	}
+	return CertLoadFromFile(location)
+}
+
+func CertLoadFromFile(path string) (cert []byte, err error) {
+	// TODO
+	return nil, nil
+}
+
+func CertLoadFromURL(inURL string) (cert []byte, err error) {
 	u, err := normalizeCertURL(inURL)
 	if err != nil {
-		fmt.Printf("%s", err)
-		os.Exit(1)
+		return
 	}
 	isAccessURL, appInfo, err := getCloudflareAccessAppInfo(u)
 	if err != nil {
-		fmt.Printf("%s", err)
-		os.Exit(1)
+		return
 	}
 	var accessAuthToken string
 	if isAccessURL {
 		accessAuthToken, err = getCloudflareAccessToken(u, appInfo)
 		if err != nil {
-			fmt.Printf("%s", err)
-			os.Exit(1)
+			return
 		}
 	}
-	_ = accessAuthToken
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return
+	}
+	if isAccessURL && accessAuthToken != "" {
+		req.Header.Add("cf-access-token", accessAuthToken)
+	}
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	cert, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+	return
 }

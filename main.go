@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -34,12 +35,74 @@ func nameAndEnvFromFilename(path string) (name string, environment string, err e
 }
 
 func main() {
-	if len(os.Args) != 3 || os.Args[1] != "rotate" || len(os.Args[2]) == 0 {
-		fmt.Printf("Usage:\n\tkubesealplus rotate sealedsecret-filename.yaml\n")
+	command := ""
+	if len(os.Args) >= 2 {
+		command = os.Args[1]
+	}
+	switch command {
+	case "rotate":
+		if len(os.Args) != 3 || len(os.Args[2]) == 0 {
+			fmt.Printf("Usage:\n\tkubesealplus rotate (sealedsecret-filename.yaml)\n")
+			os.Exit(1)
+		}
+		rotate(os.Args[2])
+	case "config":
+		if len(os.Args) != 5 || len(os.Args[2]) == 0 || os.Args[3] != "cert" {
+			fmt.Printf("Usage:\n\tkubesealplus config (environment) cert (file path or URL)\n")
+			os.Exit(1)
+		}
+		configure(os.Args[2], os.Args[3], os.Args[4])
+	default:
+		fmt.Println("Usage: kubesealplus COMMAND")
+		fmt.Println("")
+		fmt.Println("Commands:")
+		fmt.Println("\trotate (sealedsecret-filename.yaml)")
+		fmt.Println("\tconfig (environment) cert (file path or URL)")
+	}
+}
+
+var isValidEnv = regexp.MustCompile(`^[a-z0-9-]+$`).MatchString
+
+func configure(environment string, configKey string, configValue string) {
+	if !isValidEnv(environment) {
+		fmt.Printf("Invalid environment value: %s\n", environment)
 		os.Exit(1)
 	}
-	filename := os.Args[2]
 
+	if configKey != "cert" {
+		fmt.Printf("cert is the only config key supported currently")
+		os.Exit(1)
+	}
+
+	_, err := CertLoad(configValue)
+	if err != nil {
+		fmt.Printf("Unable to load cert '%s':\n%s\n", configValue, err)
+		os.Exit(1)
+	}
+
+	configFile, err := ConfigFileDefaultPath("")
+	if err != nil {
+		fmt.Printf("Unable to determine default config file path: %s", err)
+		os.Exit(1)
+	}
+	configDoc := ConfigDoc{}
+	if configDoc.Exists(configFile) {
+		err := configDoc.Load(configFile)
+		if err != nil {
+			fmt.Printf("Unable to load config file: %s", err)
+			os.Exit(1)
+		}
+	}
+	configDoc.SetEnvironment(environment, "cert", configValue)
+	err = configDoc.Save(configFile)
+	if err != nil {
+		fmt.Printf("Unable to save config file: %s", err)
+		os.Exit(1)
+	}
+	fmt.Printf("Cert '%s'\nfor environment '%s'\nsuccessfully saved to config file '%s'\n", configValue, environment, configFile)
+}
+
+func rotate(filename string) {
 	secretName, environment, err := nameAndEnvFromFilename(filename)
 	if err != nil {
 		fmt.Printf("%s\n", err)

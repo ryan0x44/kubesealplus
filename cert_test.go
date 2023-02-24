@@ -14,10 +14,14 @@ func TestNormalizeCertURL(t *testing.T) {
 		expectError      bool
 	}{
 		{
-			inURL:            "example.com",
+			inURL:            "http://example.com",
 			expectOutURL:     expectedOutURL1,
 			expectOutURLHost: "example.com",
 			expectError:      false,
+		},
+		{
+			inURL:       "example.com",
+			expectError: true,
 		},
 		{
 			inURL:       "\n",
@@ -28,6 +32,7 @@ func TestNormalizeCertURL(t *testing.T) {
 		outURL, err := normalizeCertURL(test.inURL)
 		if err != nil && !test.expectError {
 			t.Errorf("Unexpected error '%s' for URL '%s'", err, test.inURL)
+			return
 		}
 		if err == nil && test.expectError {
 			t.Errorf("Expected error for URL '%s' but got none", test.inURL)
