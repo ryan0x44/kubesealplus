@@ -5,6 +5,7 @@ import (
 	"net/url"
 
 	"github.com/cloudflare/cloudflared/token"
+	"github.com/rs/zerolog"
 )
 
 func getCloudflareAccessAppInfo(u *url.URL) (isAccessApp bool, appInfo *token.AppInfo, err error) {
@@ -19,6 +20,6 @@ func getCloudflareAccessAppInfo(u *url.URL) (isAccessApp bool, appInfo *token.Ap
 }
 
 func getCloudflareAccessToken(u *url.URL, appInfo *token.AppInfo) (authToken string, err error) {
-	authToken, err = token.FetchTokenWithRedirect(u, appInfo, nil)
+	authToken, err = token.FetchTokenWithRedirect(u, appInfo, &zerolog.Logger{})
 	return
 }
