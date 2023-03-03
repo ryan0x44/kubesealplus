@@ -27,7 +27,17 @@ changelog:
       - '^docs:'
       - '^test:'
 
-# The lines beneath this are called `modelines`. See `:help modeline`
-# Feel free to remove those if you don't want/use them.
-# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
-# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+brews:
+  -
+    tap:
+      owner: ryan0x44
+      name: homebrew-kubesealplus
+    commit_author:
+      name: goreleaserbot
+      email: git@ryan0x44.com
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    homepage: "https://github.com/ryan0x44/kubesealplus"
+    description: "A kubeseal wrapper which makes working with Sealed Secrets and Helm a breeze."
+    license: "MIT"
+    dependencies:
+      - name: kubeseal
