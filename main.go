@@ -161,28 +161,21 @@ func rotate(filename string) {
 		keys = append(keys, k)
 	}
 
-	var secrets map[string]string
-	var redoSecrets map[string]string
-	var redo string
+	secrets := PromptSecrets{}
+	secrets.InitKeys(keys)
+	redo := 0
 	for {
-		if redo != "" {
-			redoSecrets, err = PromptSecrets([]string{redo}, os.Stdin, os.Stdout)
-		} else {
-			secrets, err = PromptSecrets(keys, os.Stdin, os.Stdout)
-		}
+		err = secrets.Enter(redo, os.Stdin, os.Stdout)
 		if err != nil {
 			fmt.Printf("%s\n", err)
 			os.Exit(1)
 		}
-		if redo != "" {
-			secrets[redo] = redoSecrets[redo]
-		}
-		redo, err = PromptConfirm(secrets, os.Stdin, os.Stdout)
+		redo, err = secrets.Confirm(os.Stdin, os.Stdout)
 		if err != nil {
 			fmt.Printf("%s\n", err)
 			os.Exit(1)
 		}
-		if redo == "" {
+		if redo == 0 {
 			break
 		}
 	}
@@ -195,7 +188,7 @@ func rotate(filename string) {
 		sealedSecret.Metadata.Name,
 		sealedSecret.Metadata.Namespace,
 		time.Now(),
-		secrets,
+		secrets.ToValues(),
 	)
 	if err != nil {
 		fmt.Printf("error creating Secret:\n%s\n", err)
