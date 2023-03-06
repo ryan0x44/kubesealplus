@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -16,9 +17,15 @@ type PromptSecrets struct {
 
 type PromptSecretInput struct {
 	key   string
-	kind  string
+	kind  PromptSecretInput_Kind
 	value string
 }
+
+type PromptSecretInput_Kind string
+
+const PromptSecretInput_Kind_File PromptSecretInput_Kind = "file"
+const PromptSecretInput_Kind_String PromptSecretInput_Kind = "string"
+const PromptSecretInput_Kind_None PromptSecretInput_Kind = "none"
 
 func (s *PromptSecrets) InitKeys(keys []string) {
 	s.secrets = []PromptSecretInput{}
@@ -56,10 +63,18 @@ func (s *PromptSecrets) Enter(redo int, input io.Reader, output io.Writer) (err 
 		if err != nil {
 			return
 		}
-		// todo: detect blank or filename and set kind
+		value = strings.TrimSuffix(value, "\n")
 		s.secrets[i] = PromptSecretInput{
 			key:   secret.key,
 			value: strings.TrimSpace(value),
+		}
+		valueStatInfo, valueStatErr := os.Stat(value)
+		if value == "" {
+			s.secrets[i].kind = PromptSecretInput_Kind_None
+		} else if valueStatErr == nil && !valueStatInfo.IsDir() {
+			s.secrets[i].kind = PromptSecretInput_Kind_File
+		} else {
+			s.secrets[i].kind = PromptSecretInput_Kind_String
 		}
 	}
 	return
@@ -75,10 +90,12 @@ func (s *PromptSecrets) Confirm(input io.Reader, output io.Writer) (redo int, er
 	)
 	for i, s := range s.secrets {
 		switch s.kind {
-		case "file":
+		case PromptSecretInput_Kind_File:
 			fmt.Fprintf(output, "%d. %s will contain the contents of file %s\n", i+1, s.key, s.value)
-		case "none":
+		case PromptSecretInput_Kind_None:
 			fmt.Fprintf(output, "%d. %s will remain unchanged\n", i+1, s.key)
+		case PromptSecretInput_Kind_String:
+			fallthrough
 		default:
 			fmt.Fprintf(output, "%d. %s=%s\n", i+1, s.key, s.value)
 		}
