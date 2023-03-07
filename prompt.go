@@ -40,7 +40,9 @@ func (s PromptSecrets) ToValues() map[string]string {
 	values := map[string]string{}
 	for _, s := range s.secrets {
 		// todo:read file
-		values[s.key] = s.value
+		if s.kind != PromptSecretInput_Kind_None {
+			values[s.key] = s.value
+		}
 	}
 	return values
 }

@@ -185,12 +185,12 @@ func rotate(filename string) {
 
 	// TODO: parse filenames and read file contents
 	// TODO: support creating new sealed secrets from scratch
-
+	newSecrets := secrets.ToValues()
 	secretYAML, err := createSecretYAML(
 		sealedSecret.Metadata.Name,
 		sealedSecret.Metadata.Namespace,
 		time.Now(),
-		secrets.ToValues(),
+		newSecrets,
 	)
 	if err != nil {
 		fmt.Printf("error creating Secret:\n%s\n", err)
@@ -201,7 +201,7 @@ func rotate(filename string) {
 		fmt.Printf("error creating SealedSecret via kubeseal:\n%s\n", err)
 		os.Exit(1)
 	}
-	if len(newSealedSecrets) != len(secrets.secrets) {
+	if len(newSealedSecrets) != len(newSecrets) {
 		fmt.Printf("error creating SealedSecret via kubeseal:\n%s\n",
 			"number of secrets returned do not match number given")
 		os.Exit(1)
