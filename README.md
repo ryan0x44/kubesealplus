@@ -46,7 +46,7 @@ exact template, and the remainder of the file does not parse as valid YAML.
 Rotate secrets in an existing SealedSecret:
 
 ```
-kubesealplus rotate templates/secret-password.production.yaml`
+kubesealplus rotate templates/secret-password.production.yaml
 ```
 
 You'll be prompted to input secret values for each existing key then confirm 
