@@ -28,7 +28,7 @@ type SealedSecret struct {
 			Data     *map[string]string `json:"data" yaml:"data"`
 			Metadata map[string]string  `json:"metadata" yaml:"metadata"`
 		} `json:"template" yaml:"template"`
-	} `json:"spec yaml:"spec`
+	} `json:"spec" yaml:"spec"`
 }
 
 func createSealedSecrets(secretYAML string, certFilename string) (sealedSecrets map[string]string, err error) {

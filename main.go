@@ -181,10 +181,10 @@ func rotate(filename string) {
 			break
 		}
 	}
-
-	// TODO: allow re-use of existing values
+	PromptClear(os.Stdout)
 
 	// TODO: parse filenames and read file contents
+	// TODO: support creating new sealed secrets from scratch
 
 	secretYAML, err := createSecretYAML(
 		sealedSecret.Metadata.Name,
@@ -196,21 +196,19 @@ func rotate(filename string) {
 		fmt.Printf("error creating Secret:\n%s\n", err)
 		os.Exit(1)
 	}
-
-	// TODO: support merge-into or similar behaviour
 	newSealedSecrets, err := createSealedSecrets(secretYAML, certFilename)
 	if err != nil {
 		fmt.Printf("error creating SealedSecret via kubeseal:\n%s\n", err)
 		os.Exit(1)
 	}
-
-	// Update sealedSecret
+	if len(newSealedSecrets) != len(secrets.secrets) {
+		fmt.Printf("error creating SealedSecret via kubeseal:\n%s\n",
+			"number of secrets returned do not match number given")
+		os.Exit(1)
+	}
 	for k, v := range newSealedSecrets {
 		sealedSecret.Spec.EncryptedData[k] = v
 	}
-
-	PromptClear(os.Stdout)
-
 	out, err := sealedSecret.ToTemplate(file, environment)
 	if err != nil {
 		fmt.Printf("error writing SealedSecret to template %s:\n%s\n", filename, err)
