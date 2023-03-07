@@ -183,7 +183,6 @@ func rotate(filename string) {
 	}
 	PromptClear(os.Stdout)
 
-	// TODO: parse filenames and read file contents
 	// TODO: support creating new sealed secrets from scratch
 	newSecrets := secrets.ToValues()
 	secretYAML, err := createSecretYAML(

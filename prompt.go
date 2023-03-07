@@ -16,9 +16,10 @@ type PromptSecrets struct {
 }
 
 type PromptSecretInput struct {
-	key   string
-	kind  PromptSecretInput_Kind
-	value string
+	key           string
+	kind          PromptSecretInput_Kind
+	value         string
+	valueFromFile string
 }
 
 type PromptSecretInput_Kind string
@@ -39,8 +40,12 @@ func (s *PromptSecrets) InitKeys(keys []string) {
 func (s PromptSecrets) ToValues() map[string]string {
 	values := map[string]string{}
 	for _, s := range s.secrets {
-		// todo:read file
-		if s.kind != PromptSecretInput_Kind_None {
+		if s.kind == PromptSecretInput_Kind_None {
+			continue
+		}
+		if s.kind == PromptSecretInput_Kind_File {
+			values[s.key] = s.valueFromFile
+		} else {
 			values[s.key] = s.value
 		}
 	}
@@ -70,11 +75,12 @@ func (s *PromptSecrets) Enter(redo int, input io.Reader, output io.Writer) (err 
 			key:   secret.key,
 			value: strings.TrimSpace(value),
 		}
-		valueStatInfo, valueStatErr := os.Stat(value)
+		valueFromFile, readFileErr := os.ReadFile(value)
 		if value == "" {
 			s.secrets[i].kind = PromptSecretInput_Kind_None
-		} else if valueStatErr == nil && !valueStatInfo.IsDir() {
+		} else if readFileErr == nil {
 			s.secrets[i].kind = PromptSecretInput_Kind_File
+			s.secrets[i].valueFromFile = string(valueFromFile)
 		} else {
 			s.secrets[i].kind = PromptSecretInput_Kind_String
 		}
