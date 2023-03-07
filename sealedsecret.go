@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -13,10 +14,27 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func createSealedSecret(secretYAML string, certFilename string) (manifest string, err error) {
+type SealedSecret struct {
+	ApiVersion string `json:"apiVersion" yaml:"apiVersion"`
+	Kind       string `json:"kind" yaml:"kind"`
+	Metadata   struct {
+		CreationTimestamp time.Time `json:"creationTimestamp,omitempty" yaml:"creationTimestamp,omitempty"`
+		Name              string    `json:"name" yaml:"name"`
+		Namespace         string    `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	} `json:"metadata" yaml:"metadata"`
+	Spec struct {
+		EncryptedData map[string]string `json:"encryptedData,omitempty" yaml:"encryptedData,omitempty"`
+		Template      struct {
+			Data     *map[string]string `json:"data" yaml:"data"`
+			Metadata map[string]string  `json:"metadata" yaml:"metadata"`
+		} `json:"template" yaml:"template"`
+	} `json:"spec yaml:"spec`
+}
+
+func createSealedSecrets(secretYAML string, certFilename string) (sealedSecrets map[string]string, err error) {
 	ctx, timeout := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer timeout()
-	cmd := exec.CommandContext(ctx, "kubeseal", "-o", "yaml", "--cert", certFilename)
+	cmd := exec.CommandContext(ctx, "kubeseal", "-o", "json", "--cert", certFilename)
 	var stdout, stderr bytes.Buffer
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -33,8 +51,12 @@ func createSealedSecret(secretYAML string, certFilename string) (manifest string
 	if strings.TrimSpace(stderr.String()) != "" {
 		err = fmt.Errorf("%s", stderr.String())
 	}
-	manifest = stdout.String()
-	return
+	var sealedSecret SealedSecret
+	err = json.Unmarshal(stdout.Bytes(), &sealedSecret)
+	if err != nil {
+		return
+	}
+	return sealedSecret.Spec.EncryptedData, nil
 }
 
 const firstLineTemplate = "{{- if eq .Values.environment \"%s\" }}"
@@ -80,12 +102,16 @@ func sealedSecretFromTemplate(filename string, environment string, template stri
 	return
 }
 
-func sealedSecretToTemplate(f *os.File, environment string, template string) (out bytes.Buffer, err error) {
+func (ss *SealedSecret) ToTemplate(f *os.File, environment string) (out bytes.Buffer, err error) {
+	template, err := yaml.Marshal(ss)
+	if err != nil {
+		return
+	}
 	f.Truncate(0)
 	f.Seek(0, io.SeekStart)
 	for _, writer := range []io.StringWriter{f, &out} {
 		writer.WriteString(fmt.Sprintf(firstLineTemplate+"\n", environment))
-		writer.WriteString(template)
+		writer.WriteString(string(template))
 		writer.WriteString(fmt.Sprintf(lastLineTemplate + "\n"))
 	}
 	return

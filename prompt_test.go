@@ -5,25 +5,31 @@ import (
 	"testing"
 )
 
-func TestPromptSecrets(t *testing.T) {
+func TestPromptEnter(t *testing.T) {
 	in := bytes.Buffer{}
 	out := bytes.Buffer{}
 	in.WriteString("test\n")
-	secrets, err := PromptSecrets([]string{"SECRET1"}, &in, &out)
+	secrets := PromptSecrets{}
+	secrets.InitKeys([]string{"SECRET1"})
+	err := secrets.Enter(0, &in, &out)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
-	} else if secrets["SECRET1"] != "test" {
-		t.Errorf("Expected SECRET1=test, got:\n%s", secrets["SECRET1"])
+	} else if len(secrets.secrets) != 1 ||
+		secrets.secrets[0].key != "SECRET1" ||
+		secrets.secrets[0].value != "test" {
+		t.Errorf("Expected SECRET1=test, got:\n%s=%s", secrets.secrets[0].key, secrets.secrets[0].value)
 	}
 }
 func TestPromptConfirm(t *testing.T) {
 	in := bytes.Buffer{}
 	out := bytes.Buffer{}
 	in.WriteString("Y\n")
-	redo, err := PromptConfirm(map[string]string{"SECRET1": "example"}, &in, &out)
+	secrets := PromptSecrets{}
+	secrets.InitKeys([]string{"SECRET1"})
+	redo, err := secrets.Confirm(&in, &out)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
-	} else if redo != "" {
-		t.Errorf("Expected redo is blank, got:\n%s", redo)
+	} else if redo != 0 {
+		t.Errorf("Expected redo is zero, got:\n%d", redo)
 	}
 }

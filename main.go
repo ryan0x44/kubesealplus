@@ -126,6 +126,8 @@ func rotate(filename string) {
 	}
 
 	certConfigValue := configDoc.Environments[environment]["cert"]
+	// TODO: implement caching of cert load.
+	// we probably only need to download it at most once per hour (or day?)
 	cert, err := CertLoad(certConfigValue)
 	if err != nil {
 		fmt.Printf("Unable to load cert '%s':\n%s\n", certConfigValue, err)
@@ -195,15 +197,21 @@ func rotate(filename string) {
 		os.Exit(1)
 	}
 
-	sealedSecretYAML, err := createSealedSecret(secretYAML, certFilename)
+	// TODO: support merge-into or similar behaviour
+	newSealedSecrets, err := createSealedSecrets(secretYAML, certFilename)
 	if err != nil {
 		fmt.Printf("error creating SealedSecret via kubeseal:\n%s\n", err)
 		os.Exit(1)
 	}
 
+	// Update sealedSecret
+	for k, v := range newSealedSecrets {
+		sealedSecret.Spec.EncryptedData[k] = v
+	}
+
 	PromptClear(os.Stdout)
 
-	out, err := sealedSecretToTemplate(file, environment, sealedSecretYAML)
+	out, err := sealedSecret.ToTemplate(file, environment)
 	if err != nil {
 		fmt.Printf("error writing SealedSecret to template %s:\n%s\n", filename, err)
 		os.Exit(1)
