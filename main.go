@@ -103,7 +103,7 @@ func configure(environment string, configKey string, configValue string) {
 }
 
 func rotate(filename string) {
-	_, environment, err := nameAndEnvFromFilename(filename)
+	secretName, environment, err := nameAndEnvFromFilename(filename)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		os.Exit(1)
@@ -185,10 +185,18 @@ func rotate(filename string) {
 
 	// TODO: support creating new sealed secrets from scratch
 	newSecrets := secrets.ToValues()
+	if len(sealedSecret.Spec.Template.Metadata) == 0 {
+		timestamp := time.Now().UTC().Format(time.RFC3339)
+		// TODO: get namespace for new secrets
+		secretNamespace := ""
+		sealedSecret.Spec.Template.Metadata = map[string]*string{
+			"creationTimestamp": &timestamp,
+			"name":              &secretName,
+			"namespace":         &secretNamespace,
+		}
+	}
 	secretYAML, err := createSecretYAML(
-		sealedSecret.Metadata.Name,
-		sealedSecret.Metadata.Namespace,
-		time.Now(),
+		sealedSecret.Spec.Template.Metadata,
 		newSecrets,
 	)
 	if err != nil {

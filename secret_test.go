@@ -3,12 +3,10 @@ package main
 import (
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestCreateSecretYAML(t *testing.T) {
 	// kubectl create secret generic example-secret -o yaml --from-literal=A=B
-	datetime := "2023-02-22T23:49:39Z"
 	expect := "" +
 		"apiVersion: v1\n" +
 		"kind: Secret\n" +
@@ -16,14 +14,12 @@ func TestCreateSecretYAML(t *testing.T) {
 		"data:\n" +
 		"    A: Qg==\n" +
 		"metadata:\n" +
-		"    creationTimestamp: \"" + datetime + "\"\n" +
-		"    name: example-secret\n" +
-		"    namespace: default\n"
-	timestamp, err := time.Parse(time.RFC3339, datetime)
-	if err != nil {
-		t.Errorf("Unexpected error: %s", err)
+		"    name: example-secret\n"
+	secretName := "example-secret"
+	metadata := map[string]*string{
+		"name": &secretName,
 	}
-	got, err := createSecretYAML("example-secret", "default", timestamp, map[string]string{"A": "B"})
+	got, err := createSecretYAML(metadata, map[string]string{"A": "B"})
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}

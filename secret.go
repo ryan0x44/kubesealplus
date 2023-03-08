@@ -4,23 +4,20 @@ import (
 	"encoding/base64"
 	"fmt"
 	"regexp"
-	"time"
 
 	"gopkg.in/yaml.v3"
 )
 
 type secretManifest struct {
-	ApiVersion string            `yaml:"apiVersion"`
-	Kind       string            `yaml:"kind"`
-	Type       string            `yaml:"type"`
-	Data       map[string]string `yaml:"data"`
-	Metadata   map[string]string `yaml:"metadata"`
+	ApiVersion string             `yaml:"apiVersion"`
+	Kind       string             `yaml:"kind"`
+	Type       string             `yaml:"type"`
+	Data       map[string]string  `yaml:"data"`
+	Metadata   map[string]*string `yaml:"metadata"`
 }
 
 func createSecretYAML(
-	name string,
-	namespace string,
-	timestamp time.Time,
+	metadata map[string]*string,
 	secrets map[string]string,
 ) (manifestYAML string, err error) {
 	manifest := secretManifest{
@@ -28,11 +25,7 @@ func createSecretYAML(
 		Kind:       "Secret",
 		Type:       "Opaque",
 		Data:       map[string]string{},
-		Metadata: map[string]string{
-			"creationTimestamp": timestamp.UTC().Format(time.RFC3339),
-			"name":              name,
-			"namespace":         namespace,
-		},
+		Metadata:   metadata,
 	}
 	for k, v := range secrets {
 		manifest.Data[k] = base64.StdEncoding.EncodeToString([]byte(v))

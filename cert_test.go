@@ -14,7 +14,7 @@ func TestNormalizeCertURL(t *testing.T) {
 		expectError      bool
 	}{
 		{
-			inURL:            "http://example.com",
+			inURL:            "http://example.com/v1/cert.pem",
 			expectOutURL:     expectedOutURL1,
 			expectOutURLHost: "example.com",
 			expectError:      false,

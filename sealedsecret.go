@@ -15,18 +15,14 @@ import (
 )
 
 type SealedSecret struct {
-	ApiVersion string `json:"apiVersion" yaml:"apiVersion"`
-	Kind       string `json:"kind" yaml:"kind"`
-	Metadata   struct {
-		CreationTimestamp time.Time `json:"creationTimestamp,omitempty" yaml:"creationTimestamp,omitempty"`
-		Name              string    `json:"name" yaml:"name"`
-		Namespace         string    `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	} `json:"metadata" yaml:"metadata"`
-	Spec struct {
+	ApiVersion string             `json:"apiVersion" yaml:"apiVersion"`
+	Kind       string             `json:"kind" yaml:"kind"`
+	Metadata   map[string]*string `json:"metadata" yaml:"metadata"`
+	Spec       struct {
 		EncryptedData map[string]string `json:"encryptedData,omitempty" yaml:"encryptedData,omitempty"`
 		Template      struct {
-			Data     *map[string]string `json:"data" yaml:"data"`
-			Metadata map[string]string  `json:"metadata" yaml:"metadata"`
+			Data     *map[string]*string `json:"data" yaml:"data"`
+			Metadata map[string]*string  `json:"metadata" yaml:"metadata"`
 		} `json:"template" yaml:"template"`
 	} `json:"spec" yaml:"spec"`
 }
