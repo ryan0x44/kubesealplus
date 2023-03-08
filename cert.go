@@ -18,9 +18,6 @@ func normalizeCertURL(inURL string) (outURL *url.URL, err error) {
 		return
 	}
 	outURL.Scheme = "https"
-	if !strings.HasSuffix(outURL.Path, "/v1/cert.pem") {
-		outURL.Path = outURL.Path + "/v1/cert.pem"
-	}
 	return
 }
 

@@ -72,11 +72,8 @@ Configure the Sealed Secret public key/cert URL for the `production`
 environment:
 
 ```
-kubesealplus config production cert https://production.example.com
+kubesealplus config production cert https://sealed-secrets-controller.production.example.com/v1/cert.pem
 ```
-
-Note that we will automatically append `/v1/cert.pem` as a suffix to this if it
-is not present.
 
 ## Sharing your Public Cert/Key
 
