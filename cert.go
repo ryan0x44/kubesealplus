@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 )
 
@@ -28,9 +29,17 @@ func CertLoad(location string) ([]byte, error) {
 	return CertLoadFromFile(location)
 }
 
-func CertLoadFromFile(path string) (cert []byte, err error) {
-	// TODO
-	return nil, fmt.Errorf("loading cert from file is not implemented yet")
+func CertLoadFromFile(filename string) (cert []byte, err error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("cannot open cert file '%s': %s", filename, err)
+	}
+	defer file.Close()
+	cert, err = io.ReadAll(file)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read cert file '%s': %s", filename, err)
+	}
+	return
 }
 
 func CertLoadFromURL(inURL string) (cert []byte, err error) {
