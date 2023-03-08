@@ -39,6 +39,26 @@ spec:
 Note that Kubeseal Plus will fail if the first and last line do not match this 
 exact template, and the remainder of the file does not parse as valid YAML.
 
+## Installation
+
+If you're using macOS the preferred method is via Homebrew:
+
+```
+brew install ryan0x44/kubesealplus/kubesealplus
+```
+
+Then to install updates:
+
+```
+brew update
+brew upgrade ryan0x44/kubesealplus/kubesealplus
+```
+
+Otherwise, download the latest release binaries from:
+<https://github.com/ryan0x44/kubesealplus/releases>
+
+Or you can build/install using standard [Go](https://go.dev/doc/tutorial/compile-install) commands.
+
 ## Usage
 
 ### Rotate
