@@ -61,19 +61,10 @@ Or you can build/install using standard [Go](https://go.dev/doc/tutorial/compile
 
 ## Usage
 
-### Rotate
+### Loading values from files
 
-Rotate secrets in an existing SealedSecret:
+When using the `new` or `rotate` commands please note the following for values:
 
-```
-kubesealplus rotate templates/secret-password.production.yaml
-```
-
-You'll be prompted to input secret values for each existing key then confirm 
-before the file is written to;
-* Enter a value and press return (newline) to complete the value
-* If you want to skip rotating some keys, don't enter anything for that key and
-  press return (newline)
 * When a string literal is used as the value, white space will be trimmed 
   including leading and trailing spaces, tabs, and newline characters (per Go's
   strings.TrimSpace)
@@ -86,6 +77,36 @@ before the file is written to;
   and the auto-detection will not run (as first char will not be `/`, and the
   leading space will be trimmed)
 
+### New command
+
+Create a new SealedSecret from scratch:
+
+```
+kubesealplus new templates/secret-password.production.yaml
+```
+
+You'll be prompted to:
+1. Enter the namespace to scope your SealedSecret to.
+2. Enter the key-value pairs per line, separated by an equals sign (`=`).
+3. Once done entering key-value pairs, press enter on a blank line.
+4. Review your entered key-value pairs and ensure they were parsed correctly
+   (e.g. per the rules/logic noted above)
+
+### Rotate commnad
+
+Rotate secrets in an existing SealedSecret:
+
+```
+kubesealplus rotate templates/secret-password.production.yaml
+```
+
+You'll be prompted to input secret values for each existing key then confirm
+before the file is written to;
+* Enter a value and press return (newline) to complete the value
+* If you want to skip rotating some keys, don't enter anything for that key and
+  press return (newline)
+* Take note of the rules/logic noted above
+
 ### Config
 
 Configure the Sealed Secret public key/cert URL for the `production` 
@@ -93,6 +114,12 @@ environment:
 
 ```
 kubesealplus config production cert https://sealed-secrets-controller.production.example.com/v1/cert.pem
+```
+
+Otherwise configure it from a local file:
+
+```
+kubesealplus config production cert /path/to/cert.pem
 ```
 
 ## Sharing your Public Cert/Key

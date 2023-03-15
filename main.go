@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"time"
 )
 
 func nameAndEnvFromFilename(path string) (name string, environment string, err error) {
@@ -40,6 +39,12 @@ func main() {
 		command = os.Args[1]
 	}
 	switch command {
+	case "new":
+		if len(os.Args) != 3 || len(os.Args[2]) == 0 {
+			fmt.Printf("Usage:\n\tkubesealplus new (sealedsecret-filename.yaml)\n")
+			os.Exit(1)
+		}
+		new(os.Args[2])
 	case "rotate":
 		if len(os.Args) != 3 || len(os.Args[2]) == 0 {
 			fmt.Printf("Usage:\n\tkubesealplus rotate (sealedsecret-filename.yaml)\n")
@@ -102,27 +107,21 @@ func configure(environment string, configKey string, configValue string) {
 	fmt.Printf("Cert value '%s'\nfor environment '%s'\nsuccessfully saved to config file '%s'\n", configValue, environment, configFile)
 }
 
-func rotate(filename string) {
-	secretName, environment, err := nameAndEnvFromFilename(filename)
-	if err != nil {
-		fmt.Printf("%s\n", err)
-		os.Exit(1)
-	}
-
+func loadConfig(environment string) (certFilename string, err error) {
 	configFile, err := ConfigFileDefaultPath("")
 	if err != nil {
 		panic(err)
 	}
 	configDoc := ConfigDoc{}
 	if !configDoc.Exists(configFile) {
-		fmt.Printf("Config for environment '%s' not found. Run this:\n"+
+		err = fmt.Errorf("Config for environment '%s' not found. Run this:\n"+
 			"kubesealplus config %s cert (your-cert-file)", environment, environment)
-		os.Exit(1)
+		return
 	}
 	err = configDoc.Load(configFile)
 	if err != nil {
-		fmt.Printf("Error loading config file %s: %s\n", configFile, err)
-		os.Exit(1)
+		err = fmt.Errorf("Error loading config file %s: %s\n", configFile, err)
+		return
 	}
 
 	certConfigValue := configDoc.Environments[environment]["cert"]
@@ -130,44 +129,106 @@ func rotate(filename string) {
 	// we probably only need to download it at most once per hour (or day?)
 	cert, err := CertLoad(certConfigValue)
 	if err != nil {
-		fmt.Printf("Unable to load cert '%s':\n%s\n", certConfigValue, err)
-		os.Exit(1)
+		err = fmt.Errorf("unable to load cert '%s':\n%s\n", certConfigValue, err)
+		return
 	}
-	certFilename, err := ConfigWriteCert(environment, cert)
+	certFilename, err = ConfigWriteCert(environment, cert)
 	if err != nil {
-		fmt.Printf("Unable to write latest cert to disk:\n%s\n", err)
+		err = fmt.Errorf("Unable to write latest cert to disk:\n%s\n", err)
+		return
+	}
+	return
+}
+
+func new(filename string) {
+	fileInfo, err := os.Stat(filename)
+	if err == nil && fileInfo != nil {
+		fmt.Printf("Error: cannot create new file as file already exists\n\t%s\n", filename)
 		os.Exit(1)
 	}
 
+	secretName, environment, err := nameAndEnvFromFilename(filename)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		os.Exit(1)
+	}
+	secrets := PromptSecrets{}
+	namespace, err := secrets.Namespace(os.Stdin, os.Stdout)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		os.Exit(1)
+	}
+
+	sealedSecret := SealedSecret{Environment: environment}
+	sealedSecret.Init(secretName, namespace)
+
+	rotateAndNew(&sealedSecret, secrets)
+
+	file, err := os.Create(filename)
+	if err != nil {
+		fmt.Printf("Error creating new file: %s\n", err)
+		os.Exit(1)
+	}
+	defer file.Close()
+	out, err := sealedSecret.ToTemplate(file, environment)
+	if err != nil {
+		fmt.Printf("error writing SealedSecret file %s: %s\n", filename, err)
+		os.Exit(1)
+	}
+	fmt.Printf("Created SealedSecret file '%s' with content:\n%s", filename, out.String())
+}
+
+func rotate(filename string) {
 	file, err := os.OpenFile(filename, os.O_RDWR, 0644)
 	if err != nil {
 		fmt.Printf("Cannot open file: %s\n", filename)
 		os.Exit(1)
 	}
 	defer file.Close()
-
 	template, err := io.ReadAll(file)
 	if err != nil {
 		fmt.Printf("Cannot read file: %s\n", filename)
 		os.Exit(1)
 	}
-
+	_, environment, err := nameAndEnvFromFilename(filename)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		os.Exit(1)
+	}
 	sealedSecret, err := sealedSecretFromTemplate(filename, environment, string(template))
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		os.Exit(1)
 	}
-
-	keys := []string{}
+	secrets := PromptSecrets{}
 	for k := range sealedSecret.Spec.EncryptedData {
-		keys = append(keys, k)
+		secrets.InitKey(k)
+	}
+	rotateAndNew(&sealedSecret, secrets)
+
+	out, err := sealedSecret.ToTemplate(file, environment)
+	if err != nil {
+		fmt.Printf("error writing SealedSecret file %s: %s\n", filename, err)
+		os.Exit(1)
+	}
+	fmt.Printf("Updated SealedSecret file '%s' with content:\n%s", filename, out.String())
+}
+
+func rotateAndNew(sealedSecret *SealedSecret, secrets PromptSecrets) {
+	certFilename, err := loadConfig(sealedSecret.Environment)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		os.Exit(1)
 	}
 
-	secrets := PromptSecrets{}
-	secrets.InitKeys(keys)
 	redo := 0
 	for {
-		err = secrets.Enter(redo, os.Stdin, os.Stdout)
+		var err error
+		if len(secrets.secrets) > 0 {
+			err = secrets.Update(redo, os.Stdin, os.Stdout)
+		} else {
+			err = secrets.Enter(os.Stdin, os.Stdout)
+		}
 		if err != nil {
 			fmt.Printf("%s\n", err)
 			os.Exit(1)
@@ -183,18 +244,7 @@ func rotate(filename string) {
 	}
 	PromptClear(os.Stdout)
 
-	// TODO: support creating new sealed secrets from scratch
 	newSecrets := secrets.ToValues()
-	if len(sealedSecret.Spec.Template.Metadata) == 0 {
-		timestamp := time.Now().UTC().Format(time.RFC3339)
-		// TODO: get namespace for new secrets
-		secretNamespace := ""
-		sealedSecret.Spec.Template.Metadata = map[string]*string{
-			"creationTimestamp": &timestamp,
-			"name":              &secretName,
-			"namespace":         &secretNamespace,
-		}
-	}
 	secretYAML, err := createSecretYAML(
 		sealedSecret.Spec.Template.Metadata,
 		newSecrets,
@@ -203,6 +253,7 @@ func rotate(filename string) {
 		fmt.Printf("error creating Secret:\n%s\n", err)
 		os.Exit(1)
 	}
+
 	newSealedSecrets, err := createSealedSecrets(secretYAML, certFilename)
 	if err != nil {
 		fmt.Printf("error creating SealedSecret via kubeseal:\n%s\n", err)
@@ -213,14 +264,10 @@ func rotate(filename string) {
 			"number of secrets returned do not match number given")
 		os.Exit(1)
 	}
+	if sealedSecret.Spec.EncryptedData == nil {
+		sealedSecret.Spec.EncryptedData = map[string]string{}
+	}
 	for k, v := range newSealedSecrets {
 		sealedSecret.Spec.EncryptedData[k] = v
 	}
-	out, err := sealedSecret.ToTemplate(file, environment)
-	if err != nil {
-		fmt.Printf("error writing SealedSecret to template %s:\n%s\n", filename, err)
-		os.Exit(1)
-	}
-	fmt.Printf("Wrote new SealedSecret to file\n%s\nwith content:\n%s", filename, out.String())
-
 }

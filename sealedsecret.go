@@ -15,10 +15,11 @@ import (
 )
 
 type SealedSecret struct {
-	ApiVersion string             `json:"apiVersion" yaml:"apiVersion"`
-	Kind       string             `json:"kind" yaml:"kind"`
-	Metadata   map[string]*string `json:"metadata" yaml:"metadata"`
-	Spec       struct {
+	Environment string             `json:"-" yaml:"-"`
+	ApiVersion  string             `json:"apiVersion" yaml:"apiVersion"`
+	Kind        string             `json:"kind" yaml:"kind"`
+	Metadata    map[string]*string `json:"metadata" yaml:"metadata"`
+	Spec        struct {
 		EncryptedData map[string]string `json:"encryptedData,omitempty" yaml:"encryptedData,omitempty"`
 		Template      struct {
 			Data     *map[string]*string `json:"data" yaml:"data"`
@@ -58,6 +59,16 @@ func createSealedSecrets(secretYAML string, certFilename string) (sealedSecrets 
 const firstLineTemplate = "{{- if eq .Values.environment \"%s\" }}"
 const lastLineTemplate = `{{- end }}`
 
+func (s *SealedSecret) Init(name string, namespace string) {
+	s.ApiVersion = "bitnami.com/v1alpha1"
+	s.Kind = "SealedSecret"
+	s.Metadata = map[string]*string{
+		"name":      &name,
+		"namespace": &namespace,
+	}
+	s.Spec.Template.Metadata = s.Metadata
+}
+
 func sealedSecretFromTemplate(filename string, environment string, template string) (sealedSecret SealedSecret, err error) {
 	expectFirstLine := fmt.Sprintf(firstLineTemplate, environment)
 	const expectLastLine = lastLineTemplate
@@ -95,6 +106,7 @@ func sealedSecretFromTemplate(filename string, environment string, template stri
 		return
 	}
 
+	sealedSecret.Environment = environment
 	return
 }
 

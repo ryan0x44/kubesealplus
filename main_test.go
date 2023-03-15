@@ -13,26 +13,26 @@ func TestEnvFromFilename(t *testing.T) {
 		expectError bool
 	}{
 		{
-			filename:   "/path/to/templates/secret-example.production.yaml",
+			filename:   "/path/to/templates/secret-example.testing.yaml",
 			expectName: "example",
-			expectEnv:  "production",
+			expectEnv:  "testing",
 		},
 		{
-			filename:   "./templates/secret-example.production.yaml",
+			filename:   "./templates/secret-example.testing.yaml",
 			expectName: "example",
-			expectEnv:  "production",
+			expectEnv:  "testing",
 		}, {
-			filename:   "templates/secret-example.production.yaml",
+			filename:   "templates/secret-example.testing.yaml",
 			expectName: "example",
-			expectEnv:  "production",
+			expectEnv:  "testing",
 		},
 		{
-			filename:   "secret-example.production.yaml",
+			filename:   "secret-example.testing.yaml",
 			expectName: "example",
-			expectEnv:  "production",
+			expectEnv:  "testing",
 		},
 		{
-			filename:    "secret-example.test.production.yaml",
+			filename:    "secret-example.test.testing.yaml",
 			expectError: true,
 		},
 		{
@@ -48,7 +48,7 @@ func TestEnvFromFilename(t *testing.T) {
 			expectError: true,
 		},
 		{
-			filename:    "secret-example.production.yml",
+			filename:    "secret-example.testing.yml",
 			expectError: true,
 		},
 	}
@@ -75,7 +75,7 @@ func TestSealedSecretFromTemplate(t *testing.T) {
 		{
 			expectError: false,
 			data: `
-{{- if eq .Values.environment "production" }}
+{{- if eq .Values.environment "testing" }}
 apiVersion: bitnami.com/v1alpha1
 kind: SealedSecret
 metadata:
@@ -95,9 +95,9 @@ spec:
 		},
 		{
 			expectError:        false,
-			expectSealedSecret: &SealedSecret{ApiVersion: "bitnami.com/v1alpha1"},
+			expectSealedSecret: &SealedSecret{Environment: "testing", ApiVersion: "bitnami.com/v1alpha1"},
 			data: `
-{{- if eq .Values.environment "production" }}
+{{- if eq .Values.environment "testing" }}
 apiVersion: "bitnami.com/v1alpha1"
 {{- end }}`,
 		},
@@ -108,7 +108,7 @@ apiVersion: "bitnami.com/v1alpha1"
 		{
 			expectError: true,
 			data: `
-			{{- if eq .Values.environment "production" }}
+			{{- if eq .Values.environment "testing" }}
 			{{- end }}
 			`,
 		},
@@ -120,17 +120,17 @@ apiVersion: "bitnami.com/v1alpha1"
 			`,
 		},
 	}
-	filename := "templates/secret-example.production.yaml"
-	environment := "production"
+	filename := "templates/secret-example.testing.yaml"
+	environment := "testing"
 	i := 0
 	for _, test := range tests {
 		i++
 		sealedSecret, err := sealedSecretFromTemplate(filename, environment, test.data)
 		if err != nil && !test.expectError {
-			t.Errorf("Unexpected error in test %d: %s", i, err)
+			t.Errorf("(Test %d)Unexpected error: %s", i, err)
 		}
 		if err == nil && test.expectSealedSecret != nil && !reflect.DeepEqual(*test.expectSealedSecret, sealedSecret) {
-			t.Errorf("Parsed SealedSecret does not match.\nExpected:\n%+v\nGot:\n%+v", *test.expectSealedSecret, sealedSecret)
+			t.Errorf("(Test %d) Parsed SealedSecret does not match.\nExpected:\n%+v\nGot:\n%+v", i, *test.expectSealedSecret, sealedSecret)
 		}
 	}
 }
