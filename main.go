@@ -61,6 +61,7 @@ func main() {
 		fmt.Println("Usage: kubesealplus COMMAND")
 		fmt.Println("")
 		fmt.Println("Commands:")
+		fmt.Println("\tnew (sealedsecret-filename.yaml)")
 		fmt.Println("\trotate (sealedsecret-filename.yaml)")
 		fmt.Println("\tconfig (environment) cert (file path or URL)")
 	}
