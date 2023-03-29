@@ -14,21 +14,21 @@ func TestEnvFromFilename(t *testing.T) {
 	}{
 		{
 			filename:   "/path/to/templates/secret-example.testing.yaml",
-			expectName: "example",
+			expectName: "example-secret",
 			expectEnv:  "testing",
 		},
 		{
 			filename:   "./templates/secret-example.testing.yaml",
-			expectName: "example",
+			expectName: "example-secret",
 			expectEnv:  "testing",
 		}, {
 			filename:   "templates/secret-example.testing.yaml",
-			expectName: "example",
+			expectName: "example-secret",
 			expectEnv:  "testing",
 		},
 		{
 			filename:   "secret-example.testing.yaml",
-			expectName: "example",
+			expectName: "example-secret",
 			expectEnv:  "testing",
 		},
 		{

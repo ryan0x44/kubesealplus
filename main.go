@@ -13,7 +13,7 @@ func nameAndEnvFromFilename(path string) (name string, environment string, err e
 	filename := filepath.Base(path)
 
 	if !strings.HasPrefix(filename, "secret-") {
-		err = fmt.Errorf("filename missing expected prefix: %s", filename)
+		err = fmt.Errorf("filename missing expected 'secret-' prefix: %s", filename)
 		return
 	}
 	if !strings.HasSuffix(filename, ".yaml") {
@@ -28,7 +28,7 @@ func nameAndEnvFromFilename(path string) (name string, environment string, err e
 		err = fmt.Errorf("filename not in expected format (incorrect number of period characters): %s", filename)
 		return
 	}
-	name = split[0]
+	name = split[0] + "-secret"
 	environment = split[1]
 	return
 }
@@ -41,13 +41,13 @@ func main() {
 	switch command {
 	case "new":
 		if len(os.Args) != 3 || len(os.Args[2]) == 0 {
-			fmt.Printf("Usage:\n\tkubesealplus new (sealedsecret-filename.yaml)\n")
+			fmt.Printf("Usage:\n\tkubesealplus new (secret-example.environment.yaml)\n")
 			os.Exit(1)
 		}
 		new(os.Args[2])
 	case "rotate":
 		if len(os.Args) != 3 || len(os.Args[2]) == 0 {
-			fmt.Printf("Usage:\n\tkubesealplus rotate (sealedsecret-filename.yaml)\n")
+			fmt.Printf("Usage:\n\tkubesealplus rotate (secret-example.environment.yaml)\n")
 			os.Exit(1)
 		}
 		rotate(os.Args[2])
@@ -61,8 +61,8 @@ func main() {
 		fmt.Println("Usage: kubesealplus COMMAND")
 		fmt.Println("")
 		fmt.Println("Commands:")
-		fmt.Println("\tnew (sealedsecret-filename.yaml)")
-		fmt.Println("\trotate (sealedsecret-filename.yaml)")
+		fmt.Println("\tnew (secret-example.environment.yaml)")
+		fmt.Println("\trotate (secret-example.environment.yaml)")
 		fmt.Println("\tconfig (environment) cert (file path or URL)")
 	}
 }
